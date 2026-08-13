@@ -3,7 +3,7 @@
 @section('title', 'Dashboard Toko - ' . $store->name)
 
 @section('content')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8" x-data="{ copied: false }">
 
     <!-- Seller Header -->
     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -19,13 +19,37 @@
         </div>
 
         <div class="flex items-center gap-3">
+            <a href="{{ route('seller.products') }}" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-600/20">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                Tambah Barang Baru
+            </a>
             <a href="{{ route('marketplace.store', $store->slug) }}" target="_blank" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 border border-slate-200">
                 <i data-lucide="external-link" class="w-4 h-4 text-slate-600"></i>
-                Lihat Storefront Mandiri
+                Lihat Toko Mandiri
             </a>
-            <a href="{{ route('seller.tracking-links') }}" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-600/20">
-                <i data-lucide="link" class="w-4 h-4"></i>
-                Generator Tracking Link Ads
+        </div>
+    </div>
+
+    <!-- Storefront Link Sharing Card (Solves User Request #2) -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white p-6 rounded-2xl border border-slate-800 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="space-y-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-xs font-bold">
+                <i data-lucide="share-2" class="w-4 h-4"></i> Laman Toko Mandiri Seller
+            </div>
+            <h2 class="text-lg font-extrabold">Link Toko Anda: <code class="text-emerald-400 font-mono text-sm px-2 py-0.5 bg-slate-950/60 rounded border border-emerald-500/30">{{ url('/toko/' . $store->slug) }}</code></h2>
+            <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                Pembeli yang membuka link ini akan masuk ke laman khusus yang hanya menampilkan produk-produk dari toko Anda. Bebas dipakai untuk WhatsApp, Instagram Bio, FB Ads, maupun TikTok.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button type="button" @click="navigator.clipboard.writeText('{{ url('/toko/' . $store->slug) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+                Salin Link Toko Saya
+            </button>
+            <a href="{{ route('seller.tracking-links') }}" class="px-4 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs rounded-xl transition-all border border-white/20 flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="link-2" class="w-4 h-4"></i>
+                Link Ads Meta/TikTok
             </a>
         </div>
     </div>
@@ -75,15 +99,58 @@
 
     </div>
 
+    <!-- Recent Added Products Showcase (Solves User Request #1) -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <i data-lucide="box" class="w-4 h-4 text-emerald-600"></i>
+                    Produk Terbaru Ditambahkan (Tayang di Homepage)
+                </h3>
+                <p class="text-xs text-slate-500">Produk yang Anda tambahkan di sini otomatis langsung muncul di Katalog Utama Platform.</p>
+            </div>
+            <a href="{{ route('seller.products') }}" class="text-xs font-bold text-emerald-600 hover:underline">Kelola Semua Produk &rarr;</a>
+        </div>
+
+        @if($recentProducts->isEmpty())
+            <div class="text-center py-6 text-xs text-slate-500">
+                Belum ada produk. Klik "Tambah Barang Baru" di atas untuk menambah produk.
+            </div>
+        @else
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach($recentProducts as $p)
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-12 h-12 rounded-xl object-cover border border-slate-200 flex-shrink-0">
+                            <div class="min-w-0">
+                                <h4 class="font-bold text-xs text-slate-900 truncate">{{ $p->name }}</h4>
+                                <p class="text-[11px] font-extrabold text-emerald-700">Rp {{ number_format($p->effective_price, 0, ',', '.') }}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between text-[10px] pt-2 border-t border-slate-200/80">
+                            <span class="text-emerald-700 font-semibold flex items-center gap-1">
+                                <i data-lucide="check-circle" class="w-3 h-3"></i> Tampil di Homepage
+                            </span>
+                            <a href="{{ route('marketplace.product', $p->slug) }}" target="_blank" class="text-slate-600 hover:text-emerald-600 font-bold">
+                                Preview &rarr;
+                            </a>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
     <!-- Active Tracking Links USP Box -->
     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
                 <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
                     <i data-lucide="link-2" class="w-4 h-4 text-emerald-600"></i>
-                    Tracking Link Iklan Teraktif (USP Feature)
+                    Tracking Link Iklan Teraktif
                 </h3>
-                <p class="text-xs text-slate-500">Hasil pelacakan iklan mandiri tanpa perlu integrasi OAuth API eksternal yang rumit.</p>
+                <p class="text-xs text-slate-500">Hasil pelacakan iklan mandiri tanpa integrasi API iklan eksternal yang rumit.</p>
             </div>
             <a href="{{ route('seller.tracking-links') }}" class="text-xs font-bold text-emerald-600 hover:underline">Kelola Semua Link &rarr;</a>
         </div>
@@ -126,41 +193,10 @@
         @endif
     </div>
 
-    <!-- Recent Orders Box -->
-    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <i data-lucide="package" class="w-4 h-4 text-emerald-600"></i>
-                Pesanan Terbaru Masuk
-            </h3>
-            <a href="{{ route('seller.orders') }}" class="text-xs font-bold text-emerald-600 hover:underline">Lihat Semua Pesanan &rarr;</a>
-        </div>
-
-        @if($recentOrders->isEmpty())
-            <div class="text-center py-6 text-xs text-slate-500">
-                Belum ada pesanan masuk.
-            </div>
-        @else
-            <div class="divide-y divide-slate-100">
-                @foreach($recentOrders as $order)
-                    <div class="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-                        <div>
-                            <span class="font-mono font-bold text-slate-900">{{ $order->order_number }}</span>
-                            <span class="text-slate-400 mx-1">•</span>
-                            <span class="text-slate-600">{{ $order->buyer->name }}</span>
-                            <span class="text-slate-400 mx-1">•</span>
-                            <span class="text-slate-500">{{ $order->created_at->diffForHumans() }}</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="font-bold text-slate-900">Rp {{ number_format($order->total_product_amount, 0, ',', '.') }}</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase {{ $order->status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
-                                {{ $order->status }}
-                            </span>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        @endif
+    <!-- Toast Copy Notification -->
+    <div x-show="copied" x-transition class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold z-50 flex items-center gap-2 border border-slate-700">
+        <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+        <span>Link Laman Toko Mandiri berhasil disalin ke clipboard!</span>
     </div>
 
 </div>

@@ -40,12 +40,13 @@ class SellerDashboardController extends Controller
         
         $recentOrders = $store->orders()->with(['buyer', 'items'])->latest()->take(5)->get();
         $trackingLinks = $store->trackingLinks()->latest()->take(5)->get();
+        $recentProducts = $store->products()->with('category')->latest()->take(4)->get();
 
         $totalClicks = $store->trackingLinks()->sum('clicks_count');
         $totalConversions = $store->trackingLinks()->sum('conversions_count');
         $overallConversionRate = $totalClicks > 0 ? round(($totalConversions / $totalClicks) * 100, 2) : 0;
 
-        return view('seller.dashboard', compact('store', 'totalProducts', 'totalOrders', 'totalRevenue', 'recentOrders', 'trackingLinks', 'totalClicks', 'totalConversions', 'overallConversionRate'));
+        return view('seller.dashboard', compact('store', 'totalProducts', 'totalOrders', 'totalRevenue', 'recentOrders', 'trackingLinks', 'recentProducts', 'totalClicks', 'totalConversions', 'overallConversionRate'));
     }
 
     public function trackingLinks()
@@ -85,7 +86,7 @@ class SellerDashboardController extends Controller
             'total_revenue' => 0
         ]);
 
-        return redirect()->route('seller.tracking-links')->with('success', 'Link Tracking berhasil dibuat! Siap dipasang di iklan Anda.');
+        return redirect()->route('seller.tracking-links')->with('success', 'Link Tracking Iklan/Toko berhasil dibuat! Siap dipasang di iklan Anda.');
     }
 
     public function products()
@@ -106,11 +107,28 @@ class SellerDashboardController extends Controller
             'stock' => 'required|integer|min:0',
             'description' => 'required|string',
             'image' => 'nullable|string',
+            'image_file' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         $store = $this->getSellerStore();
 
-        Product::create([
+        // Handle Image Upload or Image URL
+        $imagePath = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80';
+
+        if ($request->hasFile('image_file')) {
+            $file = $request->file('image_file');
+            $uploadDir = public_path('uploads/products');
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            $filename = time() . '_' . Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
+            $file->move($uploadDir, $filename);
+            $imagePath = asset('uploads/products/' . $filename);
+        } elseif ($request->filled('image')) {
+            $imagePath = $request->image;
+        }
+
+        $product = Product::create([
             'store_id' => $store->id,
             'category_id' => $request->category_id,
             'name' => $request->name,
@@ -120,12 +138,25 @@ class SellerDashboardController extends Controller
             'discount_price' => $request->filled('discount_price') ? $request->discount_price : null,
             'stock' => $request->stock,
             'weight_grams' => $request->input('weight_grams', 500),
-            'image' => $request->image ?: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80',
+            'image' => $imagePath,
             'is_local_umkm' => $request->has('is_local_umkm'),
             'platform_commission_percent' => 3.5
         ]);
 
-        return redirect()->route('seller.products')->with('success', 'Produk berhasil ditambahkan ke katalog toko!');
+        // Auto-generate default shareable tracking link for this product
+        StoreTrackingLink::create([
+            'store_id' => $store->id,
+            'product_id' => $product->id,
+            'name' => 'Link Promosi - ' . $product->name,
+            'code' => 'p_' . Str::random(8),
+            'channel' => 'direct',
+            'target_type' => 'product',
+            'clicks_count' => 0,
+            'conversions_count' => 0,
+            'total_revenue' => 0
+        ]);
+
+        return redirect()->route('seller.products')->with('success', 'Produk "' . $product->name . '" berhasil ditambahkan! Produk ini LANGSUNG tampil di Halaman Utama (Homepage) dan di Laman Toko Mandiri Anda.');
     }
 
     public function orders()
