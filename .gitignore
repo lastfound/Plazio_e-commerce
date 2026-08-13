@@ -27,4 +27,6 @@ Homestead.yaml
 Thumbs.db
 /database/*.sqlite
 /database/*.sqlite-journal
+composer.lock
+
 
